@@ -1,0 +1,4 @@
+# dsh-feishu-wms bundle patch: insert the WMS plugin into the profile loader roster.
+- insert:
+    - id: feishu-wms
+      name: dsh-feishu-wms

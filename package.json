@@ -1,0 +1,58 @@
+{
+  "name": "dsh-feishu-wms",
+  "version": "0.1.0",
+  "description": "Shoe procurement reporting management (WMS) for DeepSeek Harness: Feishu order intake with agent-side semantic parsing, customer/price master data, daily outbound summaries, PDF export and monthly settlement.",
+  "license": "MIT",
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "feishu",
+    "wms",
+    "procurement",
+    "settlement",
+    "pdf",
+    "cordis"
+  ],
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./store": "./lib/store.js",
+    "./parse": "./lib/parse.js",
+    "./pdf": "./lib/pdf.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.0-rc.2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "main": "./lib/client.js",
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
+    }
+  },
+  "scripts": {
+    "test": "node --test test/parse.test.mjs test/store.test.mjs test/pdf.test.mjs test/plugin.test.mjs",
+    "verify": "node scripts/verify-requirements.mjs",
+    "e2e": "node scripts/e2e-http.mjs",
+    "preview": "node scripts/preview-panel.mjs"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2",
+    "fontkit": "^2.0.4",
+    "pdfkit": "^0.20.2"
+  }
+}

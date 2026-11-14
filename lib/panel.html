@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>鞋类采购报送管理系统</title>
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --panel: #ffffff;
+        --text: #111827;
+        --muted: #6b7280;
+        --line: #e5e7eb;
+        --brand: #2563eb;
+        --ok: #16a34a;
+        --warn: #d97706;
+        --err: #dc2626;
+        --chip: #eef2ff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0b0f16;
+          --panel: #121826;
+          --text: #e5e7eb;
+          --muted: #9ca3af;
+          --line: #26303f;
+          --brand: #60a5fa;
+          --chip: #1e293b;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 13px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        padding: 16px 22px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+      h1 { font-size: 16px; margin: 0; font-weight: 650; }
+      .sub { color: var(--muted); font-size: 12px; }
+      .spacer { flex: 1; }
+      main { padding: 18px 22px 60px; max-width: 1180px; margin: 0 auto; }
+      nav { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 22px 0; max-width: 1180px; margin: 0 auto; }
+      nav button {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 12.5px;
+        cursor: pointer;
+      }
+      nav button.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+      section.card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 14px;
+      }
+      section.card > h2 { margin: 0 0 10px; font-size: 13px; font-weight: 650; }
+      .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+      label { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+      input, select {
+        font: inherit;
+        color: var(--text);
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 5px 8px;
+        min-width: 110px;
+      }
+      input:focus, select:focus { outline: 2px solid color-mix(in srgb, var(--brand) 35%, transparent); }
+      button.primary {
+        background: var(--brand);
+        color: #fff;
+        border: 0;
+        border-radius: 8px;
+        padding: 7px 14px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button.ghost {
+        background: transparent;
+        color: inherit;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 6px 12px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+      th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+      th { color: var(--muted); font-weight: 500; font-size: 12px; }
+      td.num, th.num { text-align: right; }
+      tfoot td { font-weight: 650; border-bottom: 0; }
+      .empty { color: var(--muted); padding: 14px 4px; font-size: 12.5px; }
+      .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+      .stat { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+      .stat b { display: block; font-size: 20px; font-weight: 650; margin-top: 2px; }
+      .stat span { color: var(--muted); font-size: 12px; }
+      .chip { background: var(--chip); border-radius: 999px; padding: 1px 9px; font-size: 11.5px; color: var(--muted); }
+      #toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        max-width: 420px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+        display: none;
+        z-index: 20;
+        white-space: pre-wrap;
+      }
+      #toast.err { border-color: var(--err); color: var(--err); }
+      #toast.ok { border-color: var(--ok); }
+      .hint { color: var(--muted); font-size: 12px; }
+      .warn { color: var(--warn); }
+      .err { color: var(--err); }
+      a.link { color: var(--brand); text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>鞋类采购报送管理系统</h1>
+        <div class="sub" id="sub">正在加载…</div>
+      </div>
+      <div class="spacer"></div>
+      <label>当前角色
+        <select id="role">
+          <option value="admin">管理员</option>
+          <option value="warehouse">库管</option>
+          <option value="finance">财务</option>
+        </select>
+      </label>
+      <button class="ghost" id="refresh">刷新</button>
+    </header>
+
+    <nav id="tabs"></nav>
+    <main id="view"></main>
+    <div id="toast"></div>
+
+    <script>
+      const API = '/api/wms'
+      const state = {
+        tab: 'overview',
+        role: localStorage.getItem('wms.role') || 'admin',
+        date: new Date().toLocaleDateString('sv-SE'),
+        month: new Date().toLocaleDateString('sv-SE').slice(0, 7),
+        overview: null,
+        customers: [],
+        prices: [],
+        daily: null,
+        settlement: null,
+        orders: [],
+        pending: [],
+      }
+
+      const TABS = [
+        ['overview', '概览'],
+        ['customers', '客户档案'],
+        ['prices', '单价管理'],
+        ['daily', '当日汇总 / 出库'],
+        ['settlement', '月度结算'],
+        ['orders', '订单流水'],
+        ['pending', '待补录'],
+      ]
+
+      const el = (tag, props = {}, ...children) => {
+        const node = document.createElement(tag)
+        for (const [key, value] of Object.entries(props)) {
+          if (key === 'class') node.className = value
+          else if (key === 'text') node.textContent = value
+          else if (key.startsWith('on')) node.addEventListener(key.slice(2).toLowerCase(), value)
+          else node.setAttribute(key, value)
+        }
+        for (const child of children.flat()) if (child != null) node.append(child instanceof Node ? child : String(child))
+        return node
+      }
+
+      const toast = (message, kind = '') => {
+        const box = document.getElementById('toast')
+        box.textContent = message
+        box.className = kind
+        box.style.display = 'block'
+        clearTimeout(box._timer)
+        box._timer = setTimeout(() => (box.style.display = 'none'), kind === 'err' ? 7000 : 3200)
+      }
+
+      async function call(path, options = {}) {
+        const res = await fetch(API + path, {
+          ...options,
+          headers: { 'content-type': 'application/json', 'x-wms-role': state.role, ...(options.headers || {}) },
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || data.ok === false) throw new Error(data.error || '请求失败 ' + res.status)
+        return data
+      }
+
+      const money = (n) => (n === null || n === undefined ? '—' : Number(n).toFixed(2))
+
+      function renderTabs() {
+        const nav = document.getElementById('tabs')
+        nav.replaceChildren(
+          ...TABS.map(([key, label]) =>
+            el('button', { class: key === state.tab ? 'active' : '', onclick: () => switchTab(key) }, label),
+          ),
+        )
+      }
+
+      async function switchTab(key) {
+        state.tab = key
+        if (location.hash !== '#/' + key) history.replaceState(null, '', '#/' + key)
+        try {
+          await refreshAll()
+        } catch (err) {
+          toast(err.message, 'err')
+        }
+        render()
+      }
+
+      function statsGrid(items) {
+        return el('div', { class: 'stats' }, ...items.map(([label, value]) =>
+          el('div', { class: 'stat' }, el('span', { text: label }), el('b', { text: String(value) })),
+        ))
+      }
+
+      function table(headers, rows, foot) {
+        const thead = el('thead', {}, el('tr', {}, ...headers.map((h) => el('th', { class: h.num ? 'num' : '', text: h.label ?? h }))))
+        const tbody = el('tbody', {}, ...rows)
+        const tfoot = foot ? el('tfoot', {}, el('tr', {}, ...foot.map((f) => el('td', { class: f.num ? 'num' : '', text: f.label ?? f })))) : null
+        return el('table', {}, thead, tbody, tfoot)
+      }
+
+      function empty(text) {
+        return el('div', { class: 'empty', text })
+      }
+
+      // ---------------------------------------------------------------- views
+
+      function viewOverview() {
+        const o = state.overview || {}
+        return el('div', {},
+          el('section', { class: 'card' },
+            el('h2', { text: '今天 ' + (o.today || '') }),
+            statsGrid([
+              ['今日数量（双）', o.todayQuantity ?? 0],
+              ['今日金额（元）', money(o.todayAmount)],
+              ['今日明细行', o.todayRows ?? 0],
+              ['本月数量（双）', o.monthQuantity ?? 0],
+              ['本月金额（元）', money(o.monthAmount)],
+              ['未定价数量（双）', o.unpricedQuantity ?? 0],
+            ]),
+            el('div', { class: 'row', style: 'margin-top:12px' },
+              el('span', { class: 'chip', text: '客户 ' + (o.customers ?? 0) }),
+              el('span', { class: 'chip', text: '资料待补 ' + (o.customersIncomplete ?? 0) }),
+              el('span', { class: 'chip', text: '单价 ' + (o.prices ?? 0) }),
+              el('span', { class: 'chip', text: '订单行 ' + (o.orders ?? 0) }),
+              el('span', { class: 'chip', text: '待补录 ' + (o.pending ?? 0) }),
+            ),
+          ),
+          el('section', { class: 'card' },
+            el('h2', { text: '最近动态' }),
+            (o.recentEvents || []).length
+              ? el('div', {}, ...o.recentEvents.map((e) =>
+                  el('div', { class: 'hint' }, new Date(e.at).toLocaleString('zh-CN', { hour12: false }) + ' · ' + e.type + ' · ' + JSON.stringify(e.detail)),
+                ))
+              : empty('还没有动态。客户在飞书里发一条采购消息试试。'),
+          ),
+        )
+      }
+
+      function viewCustomers() {
+        const name = el('input', { placeholder: '客户名称', 'data-field': 'name' })
+        const contact = el('input', { placeholder: '联系方式' })
+        const address = el('input', { placeholder: '地址' })
+        const submit = el('button', { class: 'primary', text: '保存客户' })
+        submit.addEventListener('click', async () => {
+          try {
+            await call('/customers', {
+              method: 'POST',
+              body: JSON.stringify({ name: name.value, contact: contact.value, address: address.value }),
+            })
+            name.value = contact.value = address.value = ''
+            toast('客户已保存', 'ok')
+            await loadCustomers()
+            render()
+          } catch (err) {
+            toast(err.message, 'err')
+          }
+        })
+        return el('div', {},
+          el('section', { class: 'card' },
+            el('h2', { text: '新增 / 补录客户' }),
+            el('div', { class: 'row' }, name, contact, address, submit),
+            el('div', { class: 'hint', text: '同名客户会被更新，不会重复建档；客户在飞书里报单时如果缺联系方式，会自动出现在「待补录」。' }),
+          ),
+          el('section', { class: 'card' },
+            el('h2', { text: '客户列表（' + state.customers.length + '）' }),
+            state.customers.length
+              ? table(
+                  ['客户', '别名', '联系方式', '地址', '状态'],
+                  state.customers.map((c) => el('tr', {},
+                    el('td', { text: c.name }),
+                    el('td', { text: (c.aliases || []).join('、') || '—' }),
+                    el('td', { text: c.contact || '—' }),
+                    el('td', { text: c.address || '—' }),
+                    el('td', {}, el('span', { class: c.profileComplete ? 'chip' : 'chip warn', text: c.profileComplete ? '完整' : '待补联系方式' })),
+                  )),
+                )
+              : empty('还没有客户。'),
+          ),
+        )
+      }
+
+      function viewPrices() {
+        const customer = el('input', { placeholder: '客户名称' })
+        const model = el('input', { placeholder: '型号' })
+        const color = el('input', { placeholder: '颜色（可空=通用）' })
+        const unit = el('input', { placeholder: '单价（元/双）', type: 'number', step: '0.01', min: '0' })
+        const from = el('input', { type: 'date', value: state.date })
+        const submit = el('button', { class: 'primary', text: '保存单价' })
+        submit.addEventListener('click', async () => {
+          try {
+            await call('/prices', {
+              method: 'POST',
+              body: JSON.stringify({
+                customer: customer.value,
+                model: model.value,
+                color: color.value,
+                unitPrice: Number(unit.value),
+                effectiveFrom: from.value,
+              }),
+            })
+            toast('单价已保存', 'ok')
+            await loadPrices()
+            render()
+          } catch (err) {
+            toast(err.message, 'err')
+          }
+        })
+        return el('div', {},
+          el('section', { class: 'card' },
+            el('h2', { text: '新增 / 修改单价' }),
+            el('div', { class: 'row' }, customer, model, color, unit, from, submit),
+            el('div', { class: 'hint', text: '同一「客户 + 型号 + 颜色」重复保存即为修改；颜色留空表示该型号通用价。' }),
+          ),
+          el('section', { class: 'card' },
+            el('h2', { text: '单价体系（' + state.prices.length + '）' }),
+            state.prices.length
+              ? table(
+                  ['客户', '型号', '颜色', '单价', '生效日期'],
+                  state.prices.map((p) => el('tr', {},
+                    el('td', { text: p.customerName }),
+                    el('td', { text: p.model }),
+                    el('td', { text: p.color || '通用' }),
+                    el('td', { class: 'num', text: '¥' + money(p.unitPrice) }),
+                    el('td', { text: p.effectiveFrom }),
+                  )),
+                )
+              : empty('还没有单价。'),
+          ),
+        )
+      }
+
+      function viewDaily() {
+        const date = el('input', { type: 'date', value: state.date })
+        date.addEventListener('change', async () => {
+          state.date = date.value
+          await loadDaily()
+          render()
+        })
+        const d = state.daily || { rows: [], totals: {} }
+        return el('div', {},
+          el('section', { class: 'card' },
+            el('div', { class: 'row' },
+              el('label', { text: '汇总日期' }, date),
+              el('button', {
+                class: 'primary',
+                text: '导出 PDF 出库单',
+                onclick: () => window.open(API + '/outbound.pdf?date=' + state.date, '_blank'),
+              }),
+              el('span', { class: 'spacer' }),
+              el('span', { class: 'chip', text: '客户 ' + (d.totals.customers ?? 0) }),
+              el('span', { class: 'chip', text: '明细 ' + (d.rows || []).length + ' 行' }),
+              el('span', { class: 'chip', text: '合计 ' + (d.totals.quantity ?? 0) + ' 双' }),
+              el('span', { class: 'chip', text: '金额 ¥' + money(d.totals.amount) }),
+            ),
+            (d.rows || []).length
+              ? table(
+                  ['客户', '型号', '颜色', '尺码', { label: '数量', num: true }, { label: '单价', num: true }, { label: '金额', num: true }],
+                  d.rows.map((r) => el('tr', {},
+                    el('td', { text: r.customerName }),
+                    el('td', { text: r.model }),
+                    el('td', { text: r.color }),
+                    el('td', { text: r.size + '码' }),
+                    el('td', { class: 'num', text: String(r.quantity) }),
+                    el('td', { class: 'num', text: r.unitPrice === null ? '待定价' : '¥' + money(r.unitPrice) }),
+                    el('td', { class: 'num', text: r.amount === null ? '待定价' : '¥' + money(r.amount) }),
+                  )),
+                  [
+                    { label: '合计' }, '', '', '',
+                    { label: String(d.totals.quantity ?? 0), num: true },
+                    '',
+                    { label: '¥' + money(d.totals.amount), num: true },
+                  ],
+                )
+              : empty('这一天还没有订单。'),
+          ),
+        )
+      }
+
+      function viewSettlement() {
+        const month = el('input', { type: 'month', value: state.month })
+        month.addEventListener('change', async () => {
+          state.month = month.value
+          await loadSettlement()
+          render()
+        })
+        const s = state.settlement || { customers: [], totals: {} }
+        const rows = []
+        for (const c of s.customers || []) {
+          ;(c.models || []).forEach((m, index) => {
+            rows.push(el('tr', {},
+              el('td', { text: index === 0 ? c.customerName : '' }),
+              el('td', { text: m.model }),
+              el('td', { class: 'num', text: String(m.quantity) }),
+              el('td', { class: 'num', text: m.unitPrice === null ? '未定价' : '¥' + money(m.unitPrice) }),
+              el('td', { class: 'num', text: '¥' + money(m.amount) }),
+            ))
+          })
+          rows.push(el('tr', {},
+            el('td', {}),
+            el('td', { text: c.customerName + ' 小计' }),
+            el('td', { class: 'num', text: String(c.quantity) }),
+            el('td', { class: 'num', text: c.unpricedQuantity ? '未定价 ' + c.unpricedQuantity + ' 双' : '' }),
+            el('td', { class: 'num', text: '¥' + money(c.amount) }),
+          ))
+        }
+        return el('div', {},
+          el('section', { class: 'card' },
+            el('div', { class: 'row' },
+              el('label', { text: '结算月份' }, month),
+              el('button', {
+                class: 'primary',
+                text: '导出 PDF 结算单',
+                onclick: () => window.open(API + '/settlement.pdf?month=' + state.month, '_blank'),
+              }),
+              el('span', { class: 'spacer' }),
+              el('span', { class: 'chip', text: '客户 ' + (s.totals.customers ?? 0) + ' 家' }),
+              el('span', { class: 'chip', text: '合计 ' + (s.totals.quantity ?? 0) + ' 双' }),
+              el('span', { class: 'chip', text: '应收 ¥' + money(s.totals.amount) }),
+              (s.totals.unpricedQuantity || 0) > 0
+                ? el('span', { class: 'chip warn', text: '未定价 ' + s.totals.unpricedQuantity + ' 双' })
+                : null,
+            ),
+            rows.length
+              ? table(
+                  ['客户', '型号', { label: '数量', num: true }, { label: '单价', num: true }, { label: '金额', num: true }],
+                  rows,
+                  ['', '应收合计', { label: String(s.totals.quantity ?? 0), num: true }, '', { label: '¥' + money(s.totals.amount), num: true }],
+                )
+              : empty('这个月还没有订单。'),
+          ),
+        )
+      }
+
+      function viewOrders() {
+        const date = el('input', { type: 'date', value: state.date })
+        date.addEventListener('change', async () => {
+          state.date = date.value
+          await loadOrders()
+          render()
+        })
+        return el('section', { class: 'card' },
+          el('div', { class: 'row' }, el('label', { text: '订单日期' }, date), el('span', { class: 'hint', text: '订单只追加、不修改不作废（按需求约定）' })),
+          state.orders.length
+            ? table(
+                ['时间', '客户', '型号', '颜色', '尺码', { label: '数量', num: true }, { label: '单价', num: true }, '来源'],
+                state.orders.map((o) => el('tr', {},
+                  el('td', { text: new Date(o.createdAt).toLocaleTimeString('zh-CN', { hour12: false }) }),
+                  el('td', { text: o.customerName }),
+                  el('td', { text: o.model }),
+                  el('td', { text: o.color }),
+                  el('td', { text: o.size + '码' }),
+                  el('td', { class: 'num', text: String(o.quantity) }),
+                  el('td', { class: 'num', text: o.unitPrice === null ? '待定价' : '¥' + money(o.unitPrice) }),
+                  el('td', { text: o.source }),
+                )),
+              )
+            : empty('这一天还没有订单。'),
+        )
+      }
+
+      function viewPending() {
+        return el('section', { class: 'card' },
+          el('h2', { text: '待补录消息（' + state.pending.length + '）' }),
+          el('div', { class: 'hint', text: '这些是 Agent 无法一次解析完整、需要向客户追问的消息。客户补充后重新调用解析即可入库。' }),
+          state.pending.length
+            ? table(
+                ['时间', '客户', '缺字段', '原文'],
+                state.pending.map((p) => el('tr', {},
+                  el('td', { text: new Date(p.createdAt).toLocaleString('zh-CN', { hour12: false }) }),
+                  el('td', { text: p.customerName || '—' }),
+                  el('td', { text: p.missing.join('、') }),
+                  el('td', { text: p.rawText }),
+                )),
+              )
+            : empty('没有待补录消息。'),
+        )
+      }
+
+      // ---------------------------------------------------------------- data
+
+      async function loadOverview() { state.overview = await call('/overview') }
+      async function loadCustomers() { state.customers = (await call('/customers')).customers }
+      async function loadPrices() { state.prices = (await call('/prices')).prices }
+      async function loadDaily() { state.daily = await call('/daily?date=' + state.date) }
+      async function loadSettlement() { state.settlement = await call('/settlement?month=' + state.month) }
+      async function loadOrders() { state.orders = (await call('/orders?date=' + state.date)).orders }
+      async function loadPending() { state.pending = (await call('/pending')).pending }
+
+      async function refreshAll() {
+        const tasks = [loadOverview()]
+        if (state.tab === 'customers') tasks.push(loadCustomers())
+        if (state.tab === 'prices') tasks.push(loadPrices(), loadCustomers())
+        if (state.tab === 'daily') tasks.push(loadDaily())
+        if (state.tab === 'settlement') tasks.push(loadSettlement())
+        if (state.tab === 'orders') tasks.push(loadOrders())
+        if (state.tab === 'pending') tasks.push(loadPending())
+        await Promise.all(tasks)
+      }
+
+      function render() {
+        renderTabs()
+        const view = document.getElementById('view')
+        const map = {
+          overview: viewOverview,
+          customers: viewCustomers,
+          prices: viewPrices,
+          daily: viewDaily,
+          settlement: viewSettlement,
+          orders: viewOrders,
+          pending: viewPending,
+        }
+        view.replaceChildren((map[state.tab] || viewOverview)())
+        const o = state.overview
+        document.getElementById('sub').textContent = o
+          ? `今日 ${o.todayQuantity} 双 · 本月 ${o.monthQuantity} 双 · 待补录 ${o.pending} 条 · 角色 ${state.role}`
+          : '正在加载…'
+      }
+
+      async function boot() {
+        // 支持 #/daily 这类深链，刷新后仍停在同一个页签
+        const initial = (location.hash || '').replace(/^#\/?/, '')
+        if (TABS.some(([key]) => key === initial)) state.tab = initial
+        window.addEventListener('hashchange', () => {
+          const key = (location.hash || '').replace(/^#\/?/, '')
+          if (TABS.some(([k]) => k === key) && key !== state.tab) void switchTab(key)
+        })
+
+        const roleSelect = document.getElementById('role')
+        roleSelect.value = state.role
+        roleSelect.addEventListener('change', async () => {
+          state.role = roleSelect.value
+          localStorage.setItem('wms.role', state.role)
+          await refreshAll().catch((err) => toast(err.message, 'err'))
+          render()
+        })
+        document.getElementById('refresh').addEventListener('click', async () => {
+          await refreshAll().catch((err) => toast(err.message, 'err'))
+          render()
+        })
+        try {
+          await refreshAll()
+        } catch (err) {
+          toast(err.message, 'err')
+        }
+        render()
+        setInterval(() => {
+          void refreshAll().then(render).catch(() => {})
+        }, 15000)
+      }
+
+      void boot()
+    </script>
+  </body>
+</html>
